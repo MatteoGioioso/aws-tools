@@ -2,6 +2,18 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: "Costs notification"
 
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: periodic-costs-notification
+    Description: Sends you a daily email with forecasted and total current bill for the current month
+    Author: Matteo Gioioso
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['notification', 'monitoring', 'costs', 'cost explorer', 'bill', 'forecast']
+    HomePageUrl: https://github.com/hirvitek/aws-tools/tree/master/periodicCostsNotification
+    SourceCodeUrl: https://github.com/hirvitek/aws-tools/tree/master/periodicCostsNotification
+
 Parameters:
   Email:
     Type: String
