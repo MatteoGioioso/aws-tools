@@ -10,7 +10,7 @@ Metadata:
     SpdxLicenseId: MIT
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
-    Labels: ['notification', 'monitoring', 'costs', 'cost explorer', 'bill', 'forecast']
+    Labels: ['notification', 'monitoring', 'costs', 'cost-explorer', 'bill', 'forecast']
     HomePageUrl: https://github.com/hirvitek/aws-tools/tree/master/periodicCostsNotification
     SourceCodeUrl: https://github.com/hirvitek/aws-tools/tree/master/periodicCostsNotification
 
@@ -22,7 +22,7 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: nodejs12.x
+    Runtime: nodejs14.x
     Timeout: 30
     MemorySize: 128
 
