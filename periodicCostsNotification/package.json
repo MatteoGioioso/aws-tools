@@ -1,0 +1,17 @@
+{
+  "name": "cost-control",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-lambda": "^1.0.5",
+    "aws-sdk": "^2.656.0",
+    "moment": "^2.24.0"
+  }
+}

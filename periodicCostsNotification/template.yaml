@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: "Costs notification"
+
+Parameters:
+  Email:
+    Type: String
+    AllowedPattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+    ConstraintDescription: "You must input a valid email for the SNS topic"
+
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Timeout: 30
+    MemorySize: 128
+
+Resources:
+  getForecastCosts:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: index.getForecastCosts
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt CostForecastNotification.TopicName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ce:GetCostForecast
+                - ce:GetCostAndUsage
+              Resource:
+                - "*"
+      Environment:
+        Variables:
+          TOPIC_ARN: !Ref CostForecastNotification
+      Events:
+        CloudwatchEvents:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 1 * * ? *) # You can adjust the frequency of this notification
+            Enabled: true
+
+  CostForecastNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: CostForecastNotification
+      Subscription:
+        - Endpoint: !Ref Email
+          Protocol: EMAIL
+
+
