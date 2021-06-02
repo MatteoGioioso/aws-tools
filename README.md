@@ -1,2 +1,2 @@
-# aws-tools
-Collections of AWS tools
+# AWS Tools
+Collections of various AWS tools
