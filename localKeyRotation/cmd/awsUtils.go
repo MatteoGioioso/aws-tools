@@ -63,7 +63,7 @@ func (a *AWSUtils) GetNewKeys(username string) (IAMCredentials, error) {
 	params := &iam.CreateAccessKeyInput{UserName: aws.String(username)}
 	credentials, err := a.iamClient.CreateAccessKey(context.Background(), params)
 	if err != nil {
-		return IAMCredentials{}, nil
+		return IAMCredentials{}, err
 	}
 
 	return IAMCredentials{

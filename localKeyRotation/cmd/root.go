@@ -37,19 +37,6 @@ func Execute() error {
 		oldIamCredentials.accessKeyId,
 	)
 
-	if os.Getenv("LKR_BACKUP_OLD_KEYS") == "no" {
-		log.Println("[LKR] old keys NOT backed up")
-	} else {
-		// Save a copy of the credentials, just in case something happens
-		_, dir, err := awsCliConfig.StashOldCredentials()
-		if err != nil {
-			return err
-		}
-
-		log.Printf("[LKR] old keys backed up in: %v \n", dir)
-	}
-
-
 	awsUtils, err := NewAWSUtils()
 	if err != nil {
 		return err
@@ -64,12 +51,23 @@ func Execute() error {
 	if err != nil {
 		return err
 	}
-
 	log.Printf(
 		"[LKR] New IAM keys created with user: %v and access key: %v \n",
 		username,
 		newIamCredentials.accessKeyId,
 	)
+
+	if os.Getenv("LKR_BACKUP_OLD_KEYS") == "no" {
+		log.Println("[LKR] old keys NOT backed up")
+	} else {
+		// Save a copy of the credentials, just in case something happens
+		_, dir, err := awsCliConfig.StashOldCredentials()
+		if err != nil {
+			return err
+		}
+
+		log.Printf("[LKR] old keys backed up in: %v \n", dir)
+	}
 
 	if _, err := awsCliConfig.SetIAMCredentials(newIamCredentials); err != nil {
 		return err
