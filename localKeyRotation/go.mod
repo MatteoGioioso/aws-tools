@@ -1,4 +1,4 @@
-module local-key-rotation
+module localKeyRotation
 
 go 1.16
 
