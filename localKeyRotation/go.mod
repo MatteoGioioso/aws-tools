@@ -1,4 +1,4 @@
-module localKeyRotation
+module github.com/hirvitek/aws-tools/localKeyRotation
 
 go 1.16
 
