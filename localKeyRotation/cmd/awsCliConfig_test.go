@@ -39,7 +39,7 @@ func TestAwsCliConfig_StashOldCredentials(t *testing.T) {
 			t.Error(err)
 		}
 
-		dir, err := config.StashOldCredentials()
+		_, dir, err := config.StashOldCredentials()
 		if err != nil {
 			t.Error(err)
 		}
@@ -85,13 +85,28 @@ func TestAwsCliConfig_SetNewIAMCredentials(t *testing.T) {
 			username:        "aws-user",
 		}
 
-		newFile, err := config.SetNewIAMCredentials(newCredentials)
+		if _, err := config.SetIAMCredentials(newCredentials); err != nil {
+			t.Error(err)
+		}
+
+		config.awsSharedCredentialsFilePath = "../test_credentials2"
+		if err := config.SaveConfig(); err != nil {
+			t.Error(err)
+		}
+
+		file, err := ini.Load(config.awsSharedCredentialsFilePath)
 		if err != nil {
 			t.Error(err)
 		}
 
-		g.Expect(newFile.Section("default").Key(awsAccessKeyId).String()).To(gomega.Equal("ABC"))
-		g.Expect(newFile.Section("default").Key(awsSecretAccessKey).String()).To(gomega.Equal("123"))
+		g.Expect(file.Section("default").Key(awsAccessKeyId).String()).
+			To(gomega.Equal(newCredentials.accessKeyId))
+		g.Expect(file.Section("default").Key(awsSecretAccessKey).String()).
+			To(gomega.Equal(newCredentials.secretAccessKey))
+
+		if err := os.Remove(config.awsSharedCredentialsFilePath); err != nil {
+			t.Error()
+		}
 
 		cleanUp(t)
 	})
@@ -142,5 +157,4 @@ func TestNewAwsCliConfig(t *testing.T) {
 			To(gomega.Equal("8sOm3rAndom+secre7K3yDonotTry1t2"))
 		cleanUp(t)
 	})
-
 }

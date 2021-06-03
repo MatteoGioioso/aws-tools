@@ -13,6 +13,7 @@ type IAMCredentials struct {
 	secretAccessKey string
 	accessKeyId     string
 	username        string
+	profile         string
 }
 
 type AWSUtils struct {
@@ -80,6 +81,32 @@ func (a *AWSUtils) DeactivateOldKeys(accessKeyId string, username string) error 
 	}
 
 	if _, err := a.iamClient.UpdateAccessKey(context.Background(), params); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AWSUtils) ActivateOldKeys(accessKeyId string, username string) error {
+	params := &iam.UpdateAccessKeyInput{
+		AccessKeyId: aws.String(accessKeyId),
+		Status:      "Active",
+		UserName:    aws.String(username),
+	}
+
+	if _, err := a.iamClient.UpdateAccessKey(context.Background(), params); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a AWSUtils) DeleteCredentials(accessKeyId, username string) error {
+	params := &iam.DeleteAccessKeyInput{
+		AccessKeyId: aws.String(accessKeyId),
+		UserName:    aws.String(username),
+	}
+	if _, err := a.iamClient.DeleteAccessKey(context.Background(), params); err != nil {
 		return err
 	}
 

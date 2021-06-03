@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -12,20 +11,34 @@ const awsSecretAccessKey = "aws_secret_access_key"
 var rootCmd = &cobra.Command{
 	Use:   "aws-key-rotation",
 	Short: "Automatically rotate your local AWS credentials",
-	Long: "",
+	Long:  "Automatically rotate your local AWS credentials locally",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Do Stuff Here
 	},
 }
 
 func Execute() error {
-	// TODO remove this
-	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", "test_credentials")
-
+	// Initialize AWS Config
 	awsCliConfig, err := NewAwsCliConfig()
 	if err != nil {
 		return err
 	}
+	// Parse the file
+	_, err = awsCliConfig.ParseConfig()
+	if err != nil {
+		return err
+	}
+
+	if os.Getenv("LKR_BACKUP_OLD_KEYS") == "no" {
+
+	} else {
+		// Save a copy of the credentials, just in case something happens
+		if _, _, err := awsCliConfig.StashOldCredentials(); err != nil {
+			return err
+		}
+	}
+
+	oldIamCredentials := awsCliConfig.GetIAMCredentials()
 
 	awsUtils, err := NewAWSUtils()
 	if err != nil {
@@ -36,18 +49,29 @@ func Execute() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(username)
 
-	configFile, err := awsCliConfig.ParseConfig()
+	newIamCredentials, err := awsUtils.GetNewKeys(username)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%+v\n", configFile.Section("default").Key(awsAccessKeyId))
+	if _, err := awsCliConfig.SetIAMCredentials(newIamCredentials); err != nil {
+		return err
+	}
 
-	fmt.Println(awsCliConfig.GetCurrentProfile())
+	if err := awsCliConfig.SaveConfig(); err != nil {
+		return err
+	}
+
+	if os.Getenv("LKR_DELETE_OLD_KEYS") == "yes" {
+		if err := awsUtils.DeleteCredentials(oldIamCredentials.accessKeyId, username); err != nil {
+			return err
+		}
+	} else {
+		if err := awsUtils.DeactivateOldKeys(oldIamCredentials.accessKeyId, username); err != nil {
+			return err
+		}
+	}
 
 	return rootCmd.Execute()
 }
-
-

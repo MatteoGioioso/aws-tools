@@ -12,8 +12,8 @@ const defaultAwsConfigFile = "/.aws/credentials"
 
 type AwsCliConfig struct {
 	awsSharedCredentialsFilePath string
-	currentProfile string
-	configFile *ini.File
+	currentProfile               string
+	configFile                   *ini.File
 }
 
 func NewAwsCliConfig() (*AwsCliConfig, error) {
@@ -53,7 +53,16 @@ func (a *AwsCliConfig) GetCurrentProfile() string {
 	return awsProfile
 }
 
-func (a *AwsCliConfig) SetNewIAMCredentials(newCredentials IAMCredentials) (*ini.File, error) {
+func (a AwsCliConfig) GetIAMCredentials() IAMCredentials {
+	return IAMCredentials{
+		secretAccessKey: a.configFile.Section(a.currentProfile).Key(awsSecretAccessKey).String(),
+		accessKeyId:     a.configFile.Section(a.currentProfile).Key(awsAccessKeyId).String(),
+		username:        "",
+		profile:         a.currentProfile,
+	}
+}
+
+func (a *AwsCliConfig) SetIAMCredentials(newCredentials IAMCredentials) (*ini.File, error) {
 	a.configFile.Section(a.currentProfile).Key(awsAccessKeyId).SetValue(newCredentials.accessKeyId)
 	a.configFile.Section(a.currentProfile).Key(awsSecretAccessKey).SetValue(newCredentials.secretAccessKey)
 
@@ -70,35 +79,30 @@ func (a *AwsCliConfig) ParseConfig() (*ini.File, error) {
 		return nil, err
 	}
 
-	// Remove DEFAULT section, somehow it is parsed by default even if
-	// it does not exist
-	cfg.DeleteSection("DEFAULT")
 	a.configFile = cfg
 
 	return cfg, nil
 }
 
 // StashOldCredentials Stash old credentials just in case we might needed it after de-activation
-func (a *AwsCliConfig) StashOldCredentials() (string, error) {
+func (a *AwsCliConfig) StashOldCredentials() (*ini.File, string, error) {
 	a.configFile.Section(a.currentProfile)
 
 	newFile := ini.Empty()
 	if err := newFile.NewSections(a.currentProfile); err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	keyId := a.configFile.Section(a.currentProfile).Key(awsAccessKeyId).String()
-	secretKey := a.configFile.Section(a.currentProfile).Key(awsSecretAccessKey).String()
-
-	newFile.Section(a.currentProfile).Key(awsAccessKeyId).SetValue(keyId)
-	newFile.Section(a.currentProfile).Key(awsSecretAccessKey).SetValue(secretKey)
+	credentials := a.GetIAMCredentials()
+	newFile.Section(a.currentProfile).Key(awsAccessKeyId).SetValue(credentials.accessKeyId)
+	newFile.Section(a.currentProfile).Key(awsSecretAccessKey).SetValue(credentials.secretAccessKey)
 
 	dir, _ := filepath.Split(a.awsSharedCredentialsFilePath)
-	join := filepath.Join(dir, fmt.Sprintf("inactive-config-%v", time.Now().Unix()))
+	join := filepath.Join(dir, fmt.Sprintf("credentials-inactive-%v", time.Now().Unix()))
 
 	if err := newFile.SaveTo(join); err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return join, nil
+	return newFile, join, nil
 }
