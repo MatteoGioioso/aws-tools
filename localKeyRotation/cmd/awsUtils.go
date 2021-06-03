@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-const defaultAwsConfigFile = "/.aws/credentials"
-
 type IAMCredentials struct {
 	secretAccessKey string
 	accessKeyId     string

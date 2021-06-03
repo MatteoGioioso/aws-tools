@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"gopkg.in/ini.v1"
 	"os"
+	"path/filepath"
+	"time"
 )
+
+const defaultAwsConfigFile = "/.aws/credentials"
 
 type AwsCliConfig struct {
 	awsSharedCredentialsFilePath string
@@ -34,7 +38,7 @@ func (a *AwsCliConfig) GetAwsSharedCredentialFilePath() (string, error) {
 	}
 
 	if awsConfigFile == "" {
-		awsConfigFile = fmt.Sprintf("%v/%v", home, defaultAwsConfigFile)
+		awsConfigFile = fmt.Sprintf("%v%v", home, defaultAwsConfigFile)
 	}
 
 	return awsConfigFile, err
@@ -52,9 +56,6 @@ func (a *AwsCliConfig) GetCurrentProfile() string {
 func (a *AwsCliConfig) SetNewIAMCredentials(newCredentials IAMCredentials) (*ini.File, error) {
 	a.configFile.Section(a.currentProfile).Key(awsAccessKeyId).SetValue(newCredentials.accessKeyId)
 	a.configFile.Section(a.currentProfile).Key(awsSecretAccessKey).SetValue(newCredentials.secretAccessKey)
-	if err := a.configFile.SaveTo(a.awsSharedCredentialsFilePath); err != nil {
-		return nil, err
-	}
 
 	return a.configFile, nil
 }
@@ -75,4 +76,29 @@ func (a *AwsCliConfig) ParseConfig() (*ini.File, error) {
 	a.configFile = cfg
 
 	return cfg, nil
+}
+
+// StashOldCredentials Stash old credentials just in case we might needed it after de-activation
+func (a *AwsCliConfig) StashOldCredentials() (string, error) {
+	a.configFile.Section(a.currentProfile)
+
+	newFile := ini.Empty()
+	if err := newFile.NewSections(a.currentProfile); err != nil {
+		return "", err
+	}
+
+	keyId := a.configFile.Section(a.currentProfile).Key(awsAccessKeyId).String()
+	secretKey := a.configFile.Section(a.currentProfile).Key(awsSecretAccessKey).String()
+
+	newFile.Section(a.currentProfile).Key(awsAccessKeyId).SetValue(keyId)
+	newFile.Section(a.currentProfile).Key(awsSecretAccessKey).SetValue(secretKey)
+
+	dir, _ := filepath.Split(a.awsSharedCredentialsFilePath)
+	join := filepath.Join(dir, fmt.Sprintf("inactive-config-%v", time.Now().Unix()))
+
+	if err := newFile.SaveTo(join); err != nil {
+		return "", err
+	}
+
+	return join, nil
 }

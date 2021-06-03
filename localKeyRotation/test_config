@@ -1,0 +1,7 @@
+[default]
+region=us-east-1
+output=json
+
+[profile another-user]
+region=us-east-1
+source_profile = second-profile

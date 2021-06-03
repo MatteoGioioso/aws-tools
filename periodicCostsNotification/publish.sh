@@ -1,5 +1,5 @@
 export AWS_REGION=ap-southeast-1
-export VERSION=1.0.0
+export VERSION=1.0.1
 export STACK_NAME=periodic-costs-notification
 export BUCKET=${STACK_NAME}-lambda-artifacts
 
