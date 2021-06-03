@@ -14,14 +14,14 @@ For the current profile:
 ## Installation
 
 ```
-go get ...
+go get github.com/hirvitek/aws-tools/localKeyRotation@0.0.5
 ```
 
 ## Usage
 You can simply run it as a command
 
 ```
-LKR_SAVE_OLD_KEYS=0 ./localKeyRotation
+LKR_DELETE_OLD_KEYS=yes localKeyRotation
 ``` 
 
 or use a cron job to regularly rotate the keys
