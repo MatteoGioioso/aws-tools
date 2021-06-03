@@ -21,7 +21,7 @@ go get ...
 You can simply run it as a command
 
 ```
-LKR_SAVE_OLD_KEYS=0 ./lkr
+LKR_SAVE_OLD_KEYS=0 ./localKeyRotation
 ``` 
 
 or use a cron job to regularly rotate the keys
