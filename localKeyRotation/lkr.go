@@ -1,4 +1,4 @@
-package main
+package localKeyRotation
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func main() {
+func init() {
 	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
