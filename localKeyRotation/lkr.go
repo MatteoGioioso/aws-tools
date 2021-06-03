@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"local-key-rotation/cmd"
+	"github.com/hirvitek/aws-tools/localKeyRotation/cmd"
 	"os"
 )
 
