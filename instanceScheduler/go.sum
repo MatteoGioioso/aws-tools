@@ -15,6 +15,8 @@ github.com/aws/aws-sdk-go-v2/service/autoscaling v1.5.0 h1:x2ZFlx2nHbLWWFeO0AVEf
 github.com/aws/aws-sdk-go-v2/service/autoscaling v1.5.0/go.mod h1:VMYyOpvgkXyfGrjGcamQ0joxAiUwAEuvzxujDC6qFy0=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.8.0 h1:HGEgf/XvrrtF1itZoiDZ5+iAMlqzaPk2IoI4XksYpis=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.8.0/go.mod h1:XzzkrryeCoPUd9jxcdDnI2/UmlfIp13nBSpjl2SDSCM=
+github.com/aws/aws-sdk-go-v2/service/ecs v1.5.0 h1:csM92rzQqRt8q/awf2TwI86Kqn9X3aEdo4RR36HhD9s=
+github.com/aws/aws-sdk-go-v2/service/ecs v1.5.0/go.mod h1:xqNV1bRJobA3QD870zptCh3t9uUbdWgReH+brKIt8As=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.1.1 h1:l7pDLsmOGrnR8LT+3gIv8NlHpUhs7220E457KEC2UM0=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.1.1/go.mod h1:2+ehJPkdIdl46VCj67Emz/EH2hpebHZtaLdzqg+sWOI=
 github.com/aws/aws-sdk-go-v2/service/rds v1.4.1 h1:iQO1iqcI17R3pcEYU0xaXGpy7ic/d0U05dKVYPgR/uU=

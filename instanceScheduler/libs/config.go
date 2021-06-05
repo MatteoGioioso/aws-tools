@@ -29,7 +29,17 @@ type SchedulerConfig struct {
 	now       func() time.Time
 }
 
-func (s SchedulerConfig) shouldWakeup() (bool, error) {
+type SchedulerConfigClient struct {
+	Period    Period    `json:"period"`
+	TimeZone  string    `json:"timeZone"`
+	now       func() time.Time
+}
+
+func NewSchedulerConfigClient(period Period, timeZone string) *SchedulerConfigClient {
+	return &SchedulerConfigClient{Period: period, TimeZone: timeZone, now: time.Now}
+}
+
+func (s SchedulerConfigClient) ShouldWakeup() (bool, error) {
 	tz, err := s.getCurrentTimeFromTZ()
 	if err != nil {
 		return false, err
@@ -56,15 +66,15 @@ func (s SchedulerConfig) shouldWakeup() (bool, error) {
 	return false, nil
 }
 
-func (s SchedulerConfig) isWakeupDay(pattern pattern, time time.Time) bool {
+func (s SchedulerConfigClient) isWakeupDay(pattern pattern, time time.Time) bool {
 	return pattern.daysOn[time.Weekday().String()]
 }
 
-func (s SchedulerConfig) isWakeupHour(pattern pattern, time time.Time) bool {
+func (s SchedulerConfigClient) isWakeupHour(pattern pattern, time time.Time) bool {
 	return pattern.hoursOn[time.Hour()]
 }
 
-func (s SchedulerConfig) getCurrentTimeFromTZ() (time.Time, error) {
+func (s SchedulerConfigClient) getCurrentTimeFromTZ() (time.Time, error) {
 	location, err := time.LoadLocation(s.TimeZone)
 	if err != nil {
 		return time.Time{}, err

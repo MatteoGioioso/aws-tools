@@ -1,8 +1,25 @@
 package libs
 
-var allowedTypes = map[string]bool{
-	"EC2": true, "RDS": true, "RDSCluster": true, "ASG": true, "Fargate": true,
+const (
+	officeHours       = "office_hours"
+	permanentShutdown = "permanent_shutdown"
+	permanentOn       = "permanent_on"
+
+	elasticComputeCloud     = "EC2"
+	relationalDatabase      = "RDS"
+	aurora                  = "RDS_CLUSTER"
+	AutoscalingGroup        = "ASG"
+	elasticContainerService = "ECS"
+	Fargate                 = "Fargate"
+
+	instance = "instance"
+	cluster = "cluster"
+)
+
+var allowedResources = map[string]bool{
+	elasticComputeCloud: true, relationalDatabase: true, aurora: true, AutoscalingGroup: true, Fargate: true, elasticContainerService: true,
 }
+
 var allowedPatterns = map[string]pattern{
 	officeHours: {
 		hoursOn: map[int]bool{
@@ -32,7 +49,3 @@ var allowedPatterns = map[string]pattern{
 	},
 	permanentOn: {},
 }
-
-const officeHours = "office_hours"
-const permanentShutdown = "permanent_shutdown"
-const permanentOn = "permanent_on"

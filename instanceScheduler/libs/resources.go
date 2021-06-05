@@ -2,8 +2,14 @@ package libs
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"strings"
 )
 
 type ResourceState struct {
@@ -11,12 +17,309 @@ type ResourceState struct {
 }
 type ResourcesState map[string]ResourceState
 
-func getASGClient() (*autoscaling.Client, error) {
+type ResourceClientArgs struct {
+	Identifiers []string
+}
+
+type ResourcesClient interface {
+	Sleep(args ResourceClientArgs) (ResourcesState, error)
+	WakeUp(args ResourceClientArgs) (ResourcesState, error)
+}
+
+type ResourceClientsFactory map[string]ResourcesClient
+
+func NewResourceClientsFactory() (ResourceClientsFactory, error) {
+	newEC2, err := NewEC2()
+	if err != nil {
+		return nil, err
+	}
+
+	newRDS, err := NewRDS()
+	if err != nil {
+		return nil, err
+	}
+
+	newAurora, err := NewAurora()
+	if err != nil {
+		return nil, err
+	}
+
+	newECS, err := NewECS()
+	if err != nil {
+		return nil, err
+	}
+
+	factory := make(ResourceClientsFactory)
+	factory[elasticComputeCloud] = newEC2
+	factory[relationalDatabase] = newRDS
+	factory[aurora] = newAurora
+	factory[Fargate] = newECS
+
+	return factory, err
+}
+
+// ========================================== EC2 ==================================== //
+
+type EC2 struct {
+	client *ec2.Client
+}
+
+func NewEC2() (*EC2, error) {
+	e := &EC2{}
+	client, err := e.getClient()
+	if err != nil {
+		return nil, err
+	}
+	e.client = client
+
+	return e, nil
+}
+
+func (e *EC2) getClient() (*ec2.Client, error) {
 	defaultConfig, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	return autoscaling.NewFromConfig(defaultConfig), nil
+	return ec2.NewFromConfig(defaultConfig), nil
 }
 
+func (e *EC2) Sleep(args ResourceClientArgs) (ResourcesState, error) {
+	params := &ec2.StopInstancesInput{
+		InstanceIds: args.Identifiers,
+	}
+	instances, err := e.client.StopInstances(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
 
+	resourcesState := make(ResourcesState)
+	for _, instance := range instances.StoppingInstances {
+		resourcesState[*instance.InstanceId] = ResourceState{
+			State: string(instance.CurrentState.Name),
+		}
+	}
+
+	return resourcesState, nil
+}
+
+func (e *EC2) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
+	params := &ec2.StartInstancesInput{
+		InstanceIds: args.Identifiers,
+	}
+	instances, err := e.client.StartInstances(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcesState := make(ResourcesState)
+	for _, instance := range instances.StartingInstances {
+		resourcesState[*instance.InstanceId] = ResourceState{
+			State: string(instance.CurrentState.Name),
+		}
+	}
+
+	return resourcesState, nil
+}
+
+// ========================================== RDS ==================================== //
+
+type RDS struct {
+	client *rds.Client
+}
+
+func NewRDS() (*RDS, error) {
+	r := &RDS{}
+	client, err := r.getClient()
+	if err != nil {
+		return nil, err
+	}
+	r.client = client
+	return r, err
+}
+
+func (r *RDS) getClient() (*rds.Client, error) {
+	defaultConfig, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return rds.NewFromConfig(defaultConfig), nil
+}
+
+func (r *RDS) Sleep(args ResourceClientArgs) (ResourcesState, error) {
+	params := &rds.StopDBInstanceInput{
+		DBInstanceIdentifier: aws.String(args.Identifiers[0]),
+	}
+	instance, err := r.client.StopDBInstance(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcesState := make(ResourcesState)
+	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{State: *instance.DBInstance.DBInstanceStatus}
+
+	return resourcesState, nil
+}
+
+func (r *RDS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
+	params := &rds.StartDBInstanceInput{
+		DBInstanceIdentifier: aws.String(args.Identifiers[0]),
+	}
+	instance, err := r.client.StartDBInstance(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcesState := make(ResourcesState)
+	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{State: *instance.DBInstance.DBInstanceStatus}
+
+	return resourcesState, nil
+}
+
+// ========================================== AURORA ==================================== //
+
+type Aurora struct {
+	client *rds.Client
+}
+
+func NewAurora() (*Aurora, error) {
+	r := &Aurora{}
+	client, err := r.getClient()
+	if err != nil {
+		return nil, err
+	}
+	r.client = client
+	return r, err
+}
+
+func (r *Aurora) getClient() (*rds.Client, error) {
+	defaultConfig, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return rds.NewFromConfig(defaultConfig), nil
+}
+
+func (r *Aurora) Sleep(args ResourceClientArgs) (ResourcesState, error) {
+	params := &rds.StopDBClusterInput{
+		DBClusterIdentifier: aws.String(args.Identifiers[0]),
+	}
+	instance, err := r.client.StopDBCluster(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcesState := make(ResourcesState)
+	resourcesState[*instance.DBCluster.DBClusterIdentifier] = ResourceState{State: *instance.DBCluster.Status}
+
+	return resourcesState, nil
+}
+
+func (r *Aurora) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
+	params := &rds.StartDBClusterInput{
+		DBClusterIdentifier: aws.String(args.Identifiers[0]),
+	}
+	instance, err := r.client.StartDBCluster(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcesState := make(ResourcesState)
+	resourcesState[*instance.DBCluster.DBClusterIdentifier] = ResourceState{State: *instance.DBCluster.Status}
+
+	return resourcesState, nil
+}
+
+// ========================================== SSM ==================================== //
+
+type SSMTypeClient interface {
+	GetParameter(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
+}
+
+type SSM struct {
+	client SSMTypeClient
+}
+
+func NewSSM() (*SSM, error) {
+	s := &SSM{}
+	client, err := s.getClient()
+	if err != nil {
+		return nil, err
+	}
+	s.client = client
+	return s, err
+}
+
+func (s *SSM) getClient() (*ssm.Client, error) {
+	defaultConfig, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return ssm.NewFromConfig(defaultConfig), nil
+}
+
+func (s SSM) GetConfig() (*SchedulerConfig, error) {
+	params := &ssm.GetParameterInput{
+		Name: aws.String("INSTANCE_SCHEDULER_CONFIG_NAME"),
+	}
+	parameter, err := s.client.GetParameter(context.Background(), params)
+	if err != nil {
+		return &SchedulerConfig{}, err
+	}
+
+	sc := &SchedulerConfig{}
+
+	if err := json.Unmarshal([]byte(*parameter.Parameter.Value), sc); err != nil {
+		return &SchedulerConfig{}, err
+	}
+
+	return sc, err
+}
+
+type ECS struct {
+	client *ecs.Client
+}
+
+func NewECS() (*ECS, error) {
+	c := &ECS{}
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+	c.client = client
+	return c, err
+}
+
+func (e ECS) getClient() (*ecs.Client, error) {
+	defaultConfig, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return ecs.NewFromConfig(defaultConfig), nil
+}
+
+func (e ECS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
+	return e.update(args, 1)
+}
+
+func (e ECS) Sleep(args ResourceClientArgs) (ResourcesState, error) {
+	return e.update(args, 0)
+}
+
+func (e ECS) update(args ResourceClientArgs, desiredCount int32) (ResourcesState, error) {
+	clusterService := strings.Split(args.Identifiers[0], ":")
+	params := &ecs.UpdateServiceInput{
+		Service:            aws.String(clusterService[1]),
+		Cluster:            aws.String(clusterService[0]),
+		DesiredCount:       aws.Int32(desiredCount),
+		ForceNewDeployment: true,
+	}
+	service, err := e.client.UpdateService(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcesState := make(ResourcesState)
+	resourcesState[*service.Service.ServiceName] = ResourceState{State: *service.Service.Status}
+
+	return resourcesState, nil
+}

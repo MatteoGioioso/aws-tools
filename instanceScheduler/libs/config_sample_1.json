@@ -1,3 +1,10 @@
 {
-  "period": {}
+  "period": {
+    "pattern": "office_hours"
+  },
+  "resources": {
+    "i-123": {
+      "type": ""
+    }
+  }
 }
