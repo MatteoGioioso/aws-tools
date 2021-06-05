@@ -108,3 +108,4 @@ dist
 periodicCostsNotification/output.yaml
 periodicCostsNotification/node_modules
 localKeyRotation/bin
+instanceScheduler/.aws-sam

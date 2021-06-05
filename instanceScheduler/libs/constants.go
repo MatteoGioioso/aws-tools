@@ -1,7 +1,10 @@
 package libs
 
+var allowedTypes = map[string]bool{
+	"EC2": true, "RDS": true, "RDSCluster": true, "ASG": true, "Fargate": true,
+}
 var allowedPatterns = map[string]pattern{
-	"office_hours": {
+	officeHours: {
 		hoursOn: map[int]bool{
 			7:  true,
 			8:  true,
@@ -23,8 +26,13 @@ var allowedPatterns = map[string]pattern{
 			"Friday":    true,
 		},
 	},
-	"permanent_shutdown": {
+	permanentShutdown: {
 		hoursOn: map[int]bool{},
 		daysOn:  map[string]bool{},
 	},
+	permanentOn: {},
 }
+
+const officeHours = "office_hours"
+const permanentShutdown = "permanent_shutdown"
+const permanentOn = "permanent_on"

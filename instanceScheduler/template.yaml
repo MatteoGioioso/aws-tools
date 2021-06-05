@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: "Instance scheduler"
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: instance-scheduler
+    Description: Simple, modular minimalistic instance scheduler
+    Author: Matteo Gioioso
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['scheduler', 'RDS', 'EC2', 'Fargate', 'Autoscaling group']
+    HomePageUrl: https://github.com/hirvitek/aws-tools/tree/master/instanceScheduler
+    SourceCodeUrl: https://github.com/hirvitek/aws-tools/tree/master/instanceScheduler
+
+Parameters:
+  Email:
+    Type: String
+    AllowedPattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+    ConstraintDescription: "You must input a valid email for the SNS topic"
+
+Globals:
+  Function:
+    Runtime: go1.x
+    Timeout: 100
+    MemorySize: 256
+
+Resources:
+  scheduler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: scheduler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt InstanceSchedulerReportNotification.TopicName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ce:GetCostForecast
+                - ce:GetCostAndUsage
+              Resource:
+                - "*"
+      Environment:
+        Variables:
+          TOPIC_ARN: !Ref InstanceSchedulerReportNotification
+          INSTANCE_SCHEDULER_CONFIG_NAME: !Ref SchedulerConfig
+      Events:
+        CloudwatchEvents:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+            Enabled: true
+
+  InstanceSchedulerReportNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: InstanceSchedulerReportNotification
+      Subscription:
+        - Endpoint: !Ref Email
+          Protocol: EMAIL
+
+  SchedulerConfig:
+    Type: AWS::SSM::Parameter
+    Properties:
+      AllowedPattern: String
+      Description: Configuration for instance scheduler
+      Name: scheduler-config
+      Tags: Json
+      Type: String
+      Value: "{}"

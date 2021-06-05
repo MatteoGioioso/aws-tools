@@ -3,8 +3,6 @@ package libs
 import (
 	"errors"
 	"log"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -12,8 +10,6 @@ type pattern struct {
 	hoursOn map[int]bool
 	daysOn  map[string]bool
 }
-
-var allowedTypes = [4]string{"EC2", "RDS", "ASG", "Fargate"}
 
 type Period struct {
 	Pattern string `json:"pattern"`
@@ -33,36 +29,24 @@ type SchedulerConfig struct {
 	now       func() time.Time
 }
 
-func (s SchedulerConfig) ParseTime(resourceIdentifier string) ([]int, error) {
-	period := s.Period.Pattern
-	hours := strings.Split(period, "-")
-
-	ints := make([]int, 0)
-	for _, hour := range hours {
-		atoi, err := strconv.Atoi(hour)
-		if err != nil {
-			return nil, err
-		}
-
-		ints = append(ints, atoi)
-	}
-
-	return ints, nil
-}
-
 func (s SchedulerConfig) shouldWakeup() (bool, error) {
 	tz, err := s.getCurrentTimeFromTZ()
 	if err != nil {
 		return false, err
 	}
 
-	log.Printf("Current weekday: %v", tz.Weekday().String())
-	log.Printf("Current hour: %v", tz.Hour())
-
 	p := s.Period.Pattern
 	patternConfig, ok := allowedPatterns[p]
 	if !ok {
 		return false, errors.New("invalid pattern")
+	}
+
+	log.Printf("Current weekday: %v", tz.Weekday().String())
+	log.Printf("Current hour: %v", tz.Hour())
+	log.Printf("Pattern: %v", p)
+
+	if p == permanentOn {
+		return true, nil
 	}
 
 	if s.isWakeupDay(patternConfig, tz) && s.isWakeupHour(patternConfig, tz) {
