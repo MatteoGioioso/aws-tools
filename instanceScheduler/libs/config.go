@@ -26,13 +26,12 @@ type SchedulerConfig struct {
 	Period    Period    `json:"period"`
 	TimeZone  string    `json:"timeZone"`
 	Resources Resources `json:"resources"`
-	now       func() time.Time
 }
 
 type SchedulerConfigClient struct {
-	Period    Period    `json:"period"`
-	TimeZone  string    `json:"timeZone"`
-	now       func() time.Time
+	Period   Period `json:"period"`
+	TimeZone string `json:"timeZone"`
+	now      func() time.Time
 }
 
 func NewSchedulerConfigClient(period Period, timeZone string) *SchedulerConfigClient {

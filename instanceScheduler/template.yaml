@@ -39,8 +39,12 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
-                - ce:GetCostForecast
-                - ce:GetCostAndUsage
+                - ecs:UpdateService
+                - ec2:StopInstance
+                - ec2:StartInstance
+                - rds:StartDBInstance
+                - rds:StopDBInstance
+                - autoscaling:UpdateAutoScalingGroup
               Resource:
                 - "*"
       Environment:
@@ -68,6 +72,5 @@ Resources:
       AllowedPattern: String
       Description: Configuration for instance scheduler
       Name: scheduler-config
-      Tags: Json
       Type: String
       Value: "{}"

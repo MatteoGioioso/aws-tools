@@ -10,14 +10,14 @@ const (
 	aurora                  = "RDS_CLUSTER"
 	AutoscalingGroup        = "ASG"
 	elasticContainerService = "ECS"
-	Fargate                 = "Fargate"
+	fargate                 = "Fargate"
 
 	instance = "instance"
 	cluster = "cluster"
 )
 
 var allowedResources = map[string]bool{
-	elasticComputeCloud: true, relationalDatabase: true, aurora: true, AutoscalingGroup: true, Fargate: true, elasticContainerService: true,
+	elasticComputeCloud: true, relationalDatabase: true, aurora: true, AutoscalingGroup: true, fargate: true, elasticContainerService: true,
 }
 
 var allowedPatterns = map[string]pattern{

@@ -10,6 +10,13 @@ func mockNow() time.Time {
 	return time.Date(2021, 6, 5, 5, 11, 0, 0, time.UTC)
 }
 
+var (
+	insideOfficeHourAndDay     = time.Date(2021, 6, 3, 6, 11, 0, 0, time.UTC)
+	outsideOfficeHourAndDay    = time.Date(2021, 6, 5, 1, 11, 0, 0, time.UTC)
+	insideOfficeHourButNotDay  = time.Date(2021, 6, 5, 7, 11, 0, 0, time.UTC)
+	outsideOfficeHourButNotDay = time.Date(2021, 6, 2, 22, 11, 0, 0, time.UTC)
+)
+
 func TestSchedulerConfig_getCurrentTimeFromTZ(t *testing.T) {
 	g := gomega.NewWithT(t)
 
@@ -31,11 +38,6 @@ func TestSchedulerConfig_getCurrentTimeFromTZ(t *testing.T) {
 
 func TestSchedulerConfig_shouldWakeup(t *testing.T) {
 	g := gomega.NewWithT(t)
-
-	insideOfficeHourAndDay := time.Date(2021, 6, 3, 6, 11, 0, 0, time.UTC)
-	outsideOfficeHourAndDay := time.Date(2021, 6, 5, 1, 11, 0, 0, time.UTC)
-	insideOfficeHourButNotDay := time.Date(2021, 6, 5, 7, 11, 0, 0, time.UTC)
-	outsideOfficeHourButNotDay := time.Date(2021, 6, 5, 7, 11, 0, 0, time.UTC)
 
 	tests := []struct {
 		wants    bool

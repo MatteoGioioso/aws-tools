@@ -9,16 +9,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"strconv"
 	"strings"
 )
 
 type ResourceState struct {
-	State string `json:"state"`
+	State        string `json:"state"`
+	ResourceType string `json:"type"`
 }
 type ResourcesState map[string]ResourceState
 
 type ResourceClientArgs struct {
-	Identifiers []string
+	Identifiers    []string
+	ResourcesState *ResourcesState
 }
 
 type ResourcesClient interface {
@@ -44,7 +47,7 @@ func NewResourceClientsFactory() (ResourceClientsFactory, error) {
 		return nil, err
 	}
 
-	newECS, err := NewECS()
+	newFargate, err := NewFargate()
 	if err != nil {
 		return nil, err
 	}
@@ -53,15 +56,20 @@ func NewResourceClientsFactory() (ResourceClientsFactory, error) {
 	factory[elasticComputeCloud] = newEC2
 	factory[relationalDatabase] = newRDS
 	factory[aurora] = newAurora
-	factory[Fargate] = newECS
+	factory[fargate] = newFargate
 
 	return factory, err
 }
 
 // ========================================== EC2 ==================================== //
 
+type EC2TypeClient interface {
+	StopInstances(ctx context.Context, params *ec2.StopInstancesInput, optFns ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error)
+	StartInstances(ctx context.Context, params *ec2.StartInstancesInput, optFns ...func(*ec2.Options)) (*ec2.StartInstancesOutput, error)
+}
+
 type EC2 struct {
-	client *ec2.Client
+	client EC2TypeClient
 }
 
 func NewEC2() (*EC2, error) {
@@ -92,14 +100,14 @@ func (e *EC2) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 		return nil, err
 	}
 
-	resourcesState := make(ResourcesState)
 	for _, instance := range instances.StoppingInstances {
-		resourcesState[*instance.InstanceId] = ResourceState{
+		(*args.ResourcesState)[*instance.InstanceId] = ResourceState{
 			State: string(instance.CurrentState.Name),
+			ResourceType: elasticComputeCloud,
 		}
 	}
 
-	return resourcesState, nil
+	return *args.ResourcesState, nil
 }
 
 func (e *EC2) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
@@ -111,20 +119,25 @@ func (e *EC2) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 		return nil, err
 	}
 
-	resourcesState := make(ResourcesState)
 	for _, instance := range instances.StartingInstances {
-		resourcesState[*instance.InstanceId] = ResourceState{
+		(*args.ResourcesState)[*instance.InstanceId] = ResourceState{
 			State: string(instance.CurrentState.Name),
+			ResourceType: elasticComputeCloud,
 		}
 	}
 
-	return resourcesState, nil
+	return *args.ResourcesState, nil
 }
 
 // ========================================== RDS ==================================== //
 
+type RDSTypeClient interface {
+	StopDBInstance(ctx context.Context, params *rds.StopDBInstanceInput, optFns ...func(*rds.Options)) (*rds.StopDBInstanceOutput, error)
+	StartDBInstance(ctx context.Context, params *rds.StartDBInstanceInput, optFns ...func(*rds.Options)) (*rds.StartDBInstanceOutput, error)
+}
+
 type RDS struct {
-	client *rds.Client
+	client RDSTypeClient
 }
 
 func NewRDS() (*RDS, error) {
@@ -154,10 +167,12 @@ func (r *RDS) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 		return nil, err
 	}
 
-	resourcesState := make(ResourcesState)
-	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{State: *instance.DBInstance.DBInstanceStatus}
+	(*args.ResourcesState)[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
+		State: *instance.DBInstance.DBInstanceStatus,
+		ResourceType: relationalDatabase,
+	}
 
-	return resourcesState, nil
+	return *args.ResourcesState, nil
 }
 
 func (r *RDS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
@@ -170,15 +185,22 @@ func (r *RDS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 	}
 
 	resourcesState := make(ResourcesState)
-	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{State: *instance.DBInstance.DBInstanceStatus}
+	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
+		State: *instance.DBInstance.DBInstanceStatus,
+		ResourceType: relationalDatabase,
+	}
 
 	return resourcesState, nil
 }
 
 // ========================================== AURORA ==================================== //
 
+type AuroraTypeClient interface {
+	StopDBCluster(ctx context.Context, params *rds.StopDBClusterInput, optFns ...func(*rds.Options)) (*rds.StopDBClusterOutput, error)
+	StartDBCluster(ctx context.Context, params *rds.StartDBClusterInput, optFns ...func(*rds.Options)) (*rds.StartDBClusterOutput, error)
+}
 type Aurora struct {
-	client *rds.Client
+	client AuroraTypeClient
 }
 
 func NewAurora() (*Aurora, error) {
@@ -208,10 +230,12 @@ func (r *Aurora) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 		return nil, err
 	}
 
-	resourcesState := make(ResourcesState)
-	resourcesState[*instance.DBCluster.DBClusterIdentifier] = ResourceState{State: *instance.DBCluster.Status}
+	(*args.ResourcesState)[*instance.DBCluster.DBClusterIdentifier] = ResourceState{
+		State: *instance.DBCluster.Status,
+		ResourceType: aurora,
+	}
 
-	return resourcesState, nil
+	return *args.ResourcesState, nil
 }
 
 func (r *Aurora) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
@@ -224,7 +248,10 @@ func (r *Aurora) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 	}
 
 	resourcesState := make(ResourcesState)
-	resourcesState[*instance.DBCluster.DBClusterIdentifier] = ResourceState{State: *instance.DBCluster.Status}
+	resourcesState[*instance.DBCluster.DBClusterIdentifier] = ResourceState{
+		State: *instance.DBCluster.Status,
+		ResourceType: aurora,
+	}
 
 	return resourcesState, nil
 }
@@ -275,12 +302,18 @@ func (s SSM) GetConfig() (*SchedulerConfig, error) {
 	return sc, err
 }
 
-type ECS struct {
-	client *ecs.Client
+// ========================================== Fargate ==================================== //
+
+type FargateTypeClient interface {
+	UpdateService(ctx context.Context, params *ecs.UpdateServiceInput, optFns ...func(*ecs.Options)) (*ecs.UpdateServiceOutput, error)
 }
 
-func NewECS() (*ECS, error) {
-	c := &ECS{}
+type Fargate struct {
+	client FargateTypeClient
+}
+
+func NewFargate() (*Fargate, error) {
+	c := &Fargate{}
 	client, err := c.getClient()
 	if err != nil {
 		return nil, err
@@ -289,7 +322,7 @@ func NewECS() (*ECS, error) {
 	return c, err
 }
 
-func (e ECS) getClient() (*ecs.Client, error) {
+func (e Fargate) getClient() (*ecs.Client, error) {
 	defaultConfig, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
@@ -297,15 +330,15 @@ func (e ECS) getClient() (*ecs.Client, error) {
 	return ecs.NewFromConfig(defaultConfig), nil
 }
 
-func (e ECS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
+func (e Fargate) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 	return e.update(args, 1)
 }
 
-func (e ECS) Sleep(args ResourceClientArgs) (ResourcesState, error) {
+func (e Fargate) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 	return e.update(args, 0)
 }
 
-func (e ECS) update(args ResourceClientArgs, desiredCount int32) (ResourcesState, error) {
+func (e Fargate) update(args ResourceClientArgs, desiredCount int32) (ResourcesState, error) {
 	clusterService := strings.Split(args.Identifiers[0], ":")
 	params := &ecs.UpdateServiceInput{
 		Service:            aws.String(clusterService[1]),
@@ -318,8 +351,10 @@ func (e ECS) update(args ResourceClientArgs, desiredCount int32) (ResourcesState
 		return nil, err
 	}
 
-	resourcesState := make(ResourcesState)
-	resourcesState[*service.Service.ServiceName] = ResourceState{State: *service.Service.Status}
+	(*args.ResourcesState)[*service.Service.ServiceName] = ResourceState{
+		State: strconv.Itoa(int(service.Service.RunningCount)),
+		ResourceType: fargate,
+	}
 
-	return resourcesState, nil
+	return *args.ResourcesState, nil
 }
