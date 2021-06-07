@@ -21,13 +21,16 @@ func TestSchedulerConfig_getCurrentTimeFromTZ(t *testing.T) {
 	g := gomega.NewWithT(t)
 
 	t.Run("should convert to the given time zone", func(t *testing.T) {
-		config := SchedulerConfigClient{
+		config := &SchedulerConfig{
 			Period:   Period{},
 			TimeZone: "Europe/Helsinki",
-			now:      mockNow,
+		}
+		configClient := SchedulerConfigClient{
+			now:    mockNow,
+			Config: config,
 		}
 
-		got, err := config.getCurrentTimeFromTZ()
+		got, err := configClient.getCurrentTimeFromTZ()
 		if err != nil {
 			t.Error(err)
 		}
@@ -71,15 +74,18 @@ func TestSchedulerConfig_shouldWakeup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("should establish whether the resources should be awaken", func(t *testing.T) {
-			config := SchedulerConfigClient{
+			config := &SchedulerConfig{
 				Period: Period{
 					Pattern: "office_hours",
 				},
 				TimeZone: "Europe/Helsinki",
-				now:      tt.mockTime,
+			}
+			configClient := SchedulerConfigClient{
+				now:    tt.mockTime,
+				Config: config,
 			}
 
-			got, err := config.ShouldWakeup()
+			got, err := configClient.ShouldWakeup()
 			if err != nil {
 				t.Error(err)
 			}
@@ -90,15 +96,18 @@ func TestSchedulerConfig_shouldWakeup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("should establish whether the resources should be awaken", func(t *testing.T) {
-			config := SchedulerConfigClient{
+			config := &SchedulerConfig{
 				Period: Period{
 					Pattern: "permanent_shutdown",
 				},
 				TimeZone: "Europe/Helsinki",
-				now:      tt.mockTime,
+			}
+			configClient := SchedulerConfigClient{
+				now:    tt.mockTime,
+				Config: config,
 			}
 
-			got, err := config.ShouldWakeup()
+			got, err := configClient.ShouldWakeup()
 			if err != nil {
 				t.Error(err)
 			}

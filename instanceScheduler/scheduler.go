@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/hirvitek/aws-tools/instanceScheduler/libs"
 )
@@ -22,13 +21,22 @@ func HandleRequest() error {
 		return err
 	}
 
-	schedulerConfigClient := libs.NewSchedulerConfigClient(config.Period, config.TimeZone)
-	status, err := libs.SchedulerService(config, schedulerConfigClient, factory)
+	sns, err := libs.NewSNS()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%+v\n", status)
+	schedulerConfigClient := libs.NewSchedulerConfigClient(config)
+
+	service := libs.SchedulerService{
+		Config:                config,
+		SchedulerConfigClient: schedulerConfigClient,
+		Factory:               factory,
+		MessageBus:            sns,
+	}
+	if _, err := service.Execute(); err != nil {
+		return err
+	}
 
 	return nil
 }

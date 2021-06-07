@@ -22,20 +22,25 @@ type Resource struct {
 
 type Resources map[string]Resource
 
+type Report struct {
+	SendReport bool `json:"sendReport"`
+	Hour       int  `json:"hour"`
+}
+
 type SchedulerConfig struct {
+	Report    Report    `json:"report"`
 	Period    Period    `json:"period"`
 	TimeZone  string    `json:"timeZone"`
 	Resources Resources `json:"resources"`
 }
 
 type SchedulerConfigClient struct {
-	Period   Period `json:"period"`
-	TimeZone string `json:"timeZone"`
-	now      func() time.Time
+	now    func() time.Time
+	Config *SchedulerConfig `json:"config"`
 }
 
-func NewSchedulerConfigClient(period Period, timeZone string) *SchedulerConfigClient {
-	return &SchedulerConfigClient{Period: period, TimeZone: timeZone, now: time.Now}
+func NewSchedulerConfigClient(config *SchedulerConfig) *SchedulerConfigClient {
+	return &SchedulerConfigClient{Config: config, now: time.Now}
 }
 
 func (s SchedulerConfigClient) ShouldWakeup() (bool, error) {
@@ -44,7 +49,7 @@ func (s SchedulerConfigClient) ShouldWakeup() (bool, error) {
 		return false, err
 	}
 
-	p := s.Period.Pattern
+	p := s.Config.Period.Pattern
 	patternConfig, ok := allowedPatterns[p]
 	if !ok {
 		return false, errors.New("invalid pattern")
@@ -74,11 +79,28 @@ func (s SchedulerConfigClient) isWakeupHour(pattern pattern, time time.Time) boo
 }
 
 func (s SchedulerConfigClient) getCurrentTimeFromTZ() (time.Time, error) {
-	location, err := time.LoadLocation(s.TimeZone)
+	location, err := time.LoadLocation(s.Config.TimeZone)
 	if err != nil {
 		return time.Time{}, err
 	}
 
 	timeWithTimeZone := s.now().In(location)
 	return timeWithTimeZone, nil
+}
+
+func (s SchedulerConfigClient) ShouldSendReport() (bool, error) {
+	if !s.Config.Report.SendReport {
+		return false, nil
+	}
+
+	tz, err := s.getCurrentTimeFromTZ()
+	if err != nil {
+		return false, err
+	}
+
+	if tz.Hour() == s.Config.Report.Hour {
+		return true, nil
+	}
+
+	return false, nil
 }

@@ -8,7 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -102,7 +104,7 @@ func (e *EC2) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 
 	for _, instance := range instances.StoppingInstances {
 		(*args.ResourcesState)[*instance.InstanceId] = ResourceState{
-			State: string(instance.CurrentState.Name),
+			State:        string(instance.CurrentState.Name),
 			ResourceType: elasticComputeCloud,
 		}
 	}
@@ -121,7 +123,7 @@ func (e *EC2) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 
 	for _, instance := range instances.StartingInstances {
 		(*args.ResourcesState)[*instance.InstanceId] = ResourceState{
-			State: string(instance.CurrentState.Name),
+			State:        string(instance.CurrentState.Name),
 			ResourceType: elasticComputeCloud,
 		}
 	}
@@ -168,7 +170,7 @@ func (r *RDS) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 	}
 
 	(*args.ResourcesState)[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
-		State: *instance.DBInstance.DBInstanceStatus,
+		State:        *instance.DBInstance.DBInstanceStatus,
 		ResourceType: relationalDatabase,
 	}
 
@@ -186,7 +188,7 @@ func (r *RDS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 
 	resourcesState := make(ResourcesState)
 	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
-		State: *instance.DBInstance.DBInstanceStatus,
+		State:        *instance.DBInstance.DBInstanceStatus,
 		ResourceType: relationalDatabase,
 	}
 
@@ -231,7 +233,7 @@ func (r *Aurora) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 	}
 
 	(*args.ResourcesState)[*instance.DBCluster.DBClusterIdentifier] = ResourceState{
-		State: *instance.DBCluster.Status,
+		State:        *instance.DBCluster.Status,
 		ResourceType: aurora,
 	}
 
@@ -249,7 +251,7 @@ func (r *Aurora) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 
 	resourcesState := make(ResourcesState)
 	resourcesState[*instance.DBCluster.DBClusterIdentifier] = ResourceState{
-		State: *instance.DBCluster.Status,
+		State:        *instance.DBCluster.Status,
 		ResourceType: aurora,
 	}
 
@@ -352,9 +354,50 @@ func (e Fargate) update(args ResourceClientArgs, desiredCount int32) (ResourcesS
 	}
 
 	(*args.ResourcesState)[*service.Service.ServiceName] = ResourceState{
-		State: strconv.Itoa(int(service.Service.RunningCount)),
+		State:        strconv.Itoa(int(service.Service.RunningCount)),
 		ResourceType: fargate,
 	}
 
 	return *args.ResourcesState, nil
+}
+
+// ============================================== SNS =========================================== //
+
+type MessageBus interface {
+	Send(message string) error
+}
+
+type SNS struct {
+	client *sns.Client
+}
+
+func NewSNS() (*SNS, error) {
+	c := &SNS{}
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+	c.client = client
+	return c, err
+}
+
+func (e SNS) getClient() (*sns.Client, error) {
+	defaultConfig, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return sns.NewFromConfig(defaultConfig), nil
+}
+
+func (e SNS) Send(message string) error {
+	params := &sns.PublishInput{
+		Message:  aws.String(message),
+		Subject:  aws.String("AWS Scheduler report status"),
+		TopicArn: aws.String(os.Getenv("TOPIC_ARN")),
+	}
+	if _, err := e.client.Publish(context.Background(), params); err != nil {
+		return err
+	}
+
+	return nil
 }

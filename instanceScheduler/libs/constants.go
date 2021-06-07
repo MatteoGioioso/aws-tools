@@ -11,9 +11,6 @@ const (
 	AutoscalingGroup        = "ASG"
 	elasticContainerService = "ECS"
 	fargate                 = "Fargate"
-
-	instance = "instance"
-	cluster = "cluster"
 )
 
 var allowedResources = map[string]bool{
