@@ -3,6 +3,7 @@ package libs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -10,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/smithy-go"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -99,7 +102,7 @@ func (e *EC2) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 	}
 	instances, err := e.client.StopInstances(context.Background(), params)
 	if err != nil {
-		return nil, err
+		return checkError(err, args)
 	}
 
 	for _, instance := range instances.StoppingInstances {
@@ -118,7 +121,7 @@ func (e *EC2) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 	}
 	instances, err := e.client.StartInstances(context.Background(), params)
 	if err != nil {
-		return nil, err
+		return checkError(err, args)
 	}
 
 	for _, instance := range instances.StartingInstances {
@@ -166,7 +169,7 @@ func (r *RDS) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 	}
 	instance, err := r.client.StopDBInstance(context.Background(), params)
 	if err != nil {
-		return nil, err
+		return checkError(err, args)
 	}
 
 	(*args.ResourcesState)[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
@@ -183,17 +186,17 @@ func (r *RDS) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 	}
 	instance, err := r.client.StartDBInstance(context.Background(), params)
 	if err != nil {
-		return nil, err
+		return checkError(err, args)
 	}
 
-	resourcesState := make(ResourcesState)
-	resourcesState[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
+	(*args.ResourcesState)[*instance.DBInstance.DBInstanceIdentifier] = ResourceState{
 		State:        *instance.DBInstance.DBInstanceStatus,
 		ResourceType: relationalDatabase,
 	}
 
-	return resourcesState, nil
+	return *args.ResourcesState, nil
 }
+
 
 // ========================================== AURORA ==================================== //
 
@@ -229,7 +232,7 @@ func (r *Aurora) Sleep(args ResourceClientArgs) (ResourcesState, error) {
 	}
 	instance, err := r.client.StopDBCluster(context.Background(), params)
 	if err != nil {
-		return nil, err
+		return checkError(err, args)
 	}
 
 	(*args.ResourcesState)[*instance.DBCluster.DBClusterIdentifier] = ResourceState{
@@ -246,7 +249,7 @@ func (r *Aurora) WakeUp(args ResourceClientArgs) (ResourcesState, error) {
 	}
 	instance, err := r.client.StartDBCluster(context.Background(), params)
 	if err != nil {
-		return nil, err
+		return checkError(err, args)
 	}
 
 	resourcesState := make(ResourcesState)
@@ -288,7 +291,7 @@ func (s *SSM) getClient() (*ssm.Client, error) {
 
 func (s SSM) GetConfig() (*SchedulerConfig, error) {
 	params := &ssm.GetParameterInput{
-		Name: aws.String("INSTANCE_SCHEDULER_CONFIG_NAME"),
+		Name: aws.String(os.Getenv("INSTANCE_SCHEDULER_CONFIG_NAME")),
 	}
 	parameter, err := s.client.GetParameter(context.Background(), params)
 	if err != nil {
@@ -400,4 +403,28 @@ func (e SNS) Send(message string) error {
 	}
 
 	return nil
+}
+
+func checkError(err error, args ResourceClientArgs) (ResourcesState, error) {
+	var oe *smithy.OperationError
+	if errors.As(err, &oe) {
+		log.Printf("failed to call service: %s, operation: %s, error: %v", oe.Service(), oe.Operation(), oe.Unwrap())
+		if strings.Contains(oe.Operation(), "Stop") {
+			(*args.ResourcesState)[args.Identifiers[0]] = ResourceState{
+				State:        "Stopped",
+				ResourceType: relationalDatabase,
+			}
+		}
+
+		if strings.Contains(oe.Operation(), "Start") {
+			(*args.ResourcesState)[args.Identifiers[0]] = ResourceState{
+				State:        "Started",
+				ResourceType: relationalDatabase,
+			}
+		}
+
+		return *args.ResourcesState, nil
+	}
+
+	return nil, err
 }

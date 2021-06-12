@@ -7,7 +7,7 @@ const (
 
 	elasticComputeCloud     = "EC2"
 	relationalDatabase      = "RDS"
-	aurora                  = "RDS_CLUSTER"
+	aurora                  = "AURORA"
 	AutoscalingGroup        = "ASG"
 	elasticContainerService = "ECS"
 	fargate                 = "Fargate"
