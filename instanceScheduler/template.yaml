@@ -10,7 +10,7 @@ Metadata:
     SpdxLicenseId: MIT
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
-    Labels: ['scheduler', 'RDS', 'EC2', 'Fargate', 'Autoscaling group']
+    Labels: ['scheduler', 'RDS', 'EC2', 'Fargate', 'ASG']
     HomePageUrl: https://github.com/hirvitek/aws-tools/tree/master/instanceScheduler
     SourceCodeUrl: https://github.com/hirvitek/aws-tools/tree/master/instanceScheduler
 
@@ -44,6 +44,7 @@ Resources:
                 - ec2:StartInstance
                 - rds:StartDBInstance
                 - rds:StopDBInstance
+                - ssm:GetParameter
                 - autoscaling:UpdateAutoScalingGroup
               Resource:
                 - "*"
@@ -69,7 +70,6 @@ Resources:
   SchedulerConfig:
     Type: AWS::SSM::Parameter
     Properties:
-      AllowedPattern: String
       Description: Configuration for instance scheduler
       Name: scheduler-config
       Type: String

@@ -11,5 +11,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/rds v1.4.1
 	github.com/aws/aws-sdk-go-v2/service/sns v1.5.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.6.1
+	github.com/aws/smithy-go v1.4.0 // indirect
 	github.com/onsi/gomega v1.13.0
 )
