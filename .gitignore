@@ -109,3 +109,5 @@ periodicCostsNotification/output.yaml
 periodicCostsNotification/node_modules
 localKeyRotation/bin
 instanceScheduler/.aws-sam
+instanceScheduler/output.yaml
+instanceScheduler/initialconfig.json

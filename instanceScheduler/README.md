@@ -26,7 +26,8 @@ NOTE: **You must have golang or above in order to be able to run this**
 
 ### After deployment
 
-**Be sure to check your email to accept the SNS subscription**
+- **Be sure to check your email to accept the SNS subscription**
+- **Access SSM Parameter store and input your scheduler configuration**
 
 # Config
 You can configure the instance scheduler by changing the SSM Parameter called `scheduler-config`.
