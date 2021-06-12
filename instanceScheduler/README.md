@@ -59,18 +59,15 @@ Sample config:
 
 ### Resource types:
 
-###`EC2`:
-Will stop or start your EC2 instance
-
-###`RDS`:
-Will bring simply stop or start the RDS specified instance
-
-###`AURORA`:
-This will simply stop or start your Aurora DB cluster
-
-### `Fargate`: 
-For this type the instance scheduler will only bring the DesiredCount to 0 or 1. 
-The identifier for this resource is: `<ecs-cluster-identifier>:<fargate-service-identifier>`
+- ### `EC2`:
+  Will stop or start your EC2 instance
+- ### `RDS`:
+  Will bring simply stop or start the RDS specified instance
+- ### `AURORA`:
+  This will simply stop or start your Aurora DB cluster
+- ### `Fargate`: 
+   For this type the instance scheduler will only bring the DesiredCount to 0 or 1. 
+  The identifier for this resource is: `<ecs-cluster-identifier>:<fargate-service-identifier>`
 
 ### Allowed patterns:
 
